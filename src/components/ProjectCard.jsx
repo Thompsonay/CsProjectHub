@@ -1,9 +1,24 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext.jsx'
 
 export default function ProjectCard({ project }) {
+  const { user, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+
   const initials = project.institution
     ? project.institution.replace(/[^A-Z]/g, '').slice(0, 2) || project.institution[0].toUpperCase()
     : '?'
+
+  const detailPath = `/projects/${project.id}`
+
+  function handleViewDetails(event) {
+    if (authLoading) { event.preventDefault(); return }
+    if (!user) {
+      event.preventDefault()
+      navigate('/login', { state: { from: location.pathname } })
+    }
+  }
 
   return (
     <article
@@ -92,7 +107,8 @@ export default function ProjectCard({ project }) {
 
           {/* View Details button */}
           <Link
-            to={`/projects/${project.id}`}
+            to={detailPath}
+            onClick={handleViewDetails}
             className="block w-full bg-surface-container-low text-primary text-sm font-medium py-2 rounded-lg text-center hover:bg-primary hover:text-on-primary transition-all duration-300"
             style={{ fontFamily: 'JetBrains Mono, monospace' }}
           >

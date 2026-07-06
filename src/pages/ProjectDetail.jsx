@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext.jsx'
 import { supabase } from '../lib/supabaseClient'
 
 export default function ProjectDetail() {
   const { id } = useParams()
+  const { user, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [project, setProject] = useState(null)
   const [originalProject, setOriginalProject] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [bookmarked, setBookmarked] = useState(false)
+  const [bookmarkBusy, setBookmarkBusy] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -44,6 +50,39 @@ export default function ProjectDetail() {
     load()
     return () => { cancelled = true }
   }, [id])
+
+  useEffect(() => {
+    if (!user) { setBookmarked(false); return }
+    let cancelled = false
+
+    supabase
+      .from('bookmarks')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('project_id', id)
+      .maybeSingle()
+      .then(({ data }) => { if (!cancelled) setBookmarked(Boolean(data)) })
+
+    return () => { cancelled = true }
+  }, [user, id])
+
+  async function toggleBookmark() {
+    if (authLoading) return
+    if (!user) {
+      navigate('/login', { state: { from: location.pathname } })
+      return
+    }
+
+    setBookmarkBusy(true)
+    if (bookmarked) {
+      await supabase.from('bookmarks').delete().match({ user_id: user.id, project_id: id })
+      setBookmarked(false)
+    } else {
+      await supabase.from('bookmarks').insert({ user_id: user.id, project_id: id })
+      setBookmarked(true)
+    }
+    setBookmarkBusy(false)
+  }
 
   if (loading) {
     return (
@@ -218,9 +257,15 @@ export default function ProjectDetail() {
                 <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>thumb_up</span>
                 <span className="text-sm font-medium">{project.upvotes ?? 0} upvotes</span>
               </div>
-              <button className="flex items-center gap-1.5 text-primary hover:opacity-80 transition-opacity">
-                <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>bookmark_add</span>
-                <span className="text-sm font-medium">Save</span>
+              <button
+                onClick={toggleBookmark}
+                disabled={bookmarkBusy || authLoading}
+                className="flex items-center gap-1.5 text-primary hover:opacity-80 transition-opacity disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '20px', fontVariationSettings: bookmarked ? "'FILL' 1" : "'FILL' 0" }}>
+                  {bookmarked ? 'bookmark' : 'bookmark_add'}
+                </span>
+                <span className="text-sm font-medium">{bookmarked ? 'Saved' : 'Save'}</span>
               </button>
             </div>
           </div>
