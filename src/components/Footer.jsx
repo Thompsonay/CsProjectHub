@@ -20,7 +20,7 @@ export default function Footer() {
             Documentation
           </a>
           <a href="#" className="text-xs text-on-surface-variant hover:text-primary transition-colors" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
-            Privacy  Policy
+            Privacy Policy
           </a>
           <a href="#" className="text-xs text-on-surface-variant hover:text-primary transition-colors" style={{ fontFamily: 'JetBrains Mono, monospace' }}>
             Terms of Service
