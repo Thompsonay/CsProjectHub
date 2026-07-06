@@ -14,6 +14,8 @@ export default function ProjectDetail() {
   const [error, setError] = useState(null)
   const [bookmarked, setBookmarked] = useState(false)
   const [bookmarkBusy, setBookmarkBusy] = useState(false)
+  const [forkBusy, setForkBusy] = useState(false)
+  const [forkError, setForkError] = useState(null)
 
   useEffect(() => {
     let cancelled = false
@@ -82,6 +84,41 @@ export default function ProjectDetail() {
       setBookmarked(true)
     }
     setBookmarkBusy(false)
+  }
+
+  async function handleFork() {
+    if (authLoading || forkBusy) return
+    if (!user) {
+      navigate('/login', { state: { from: location.pathname } })
+      return
+    }
+
+    setForkBusy(true)
+    setForkError(null)
+
+    const { data, error } = await supabase
+      .from('projects')
+      .insert({
+        author_id: user.id,
+        forked_from: project.id,
+        title: project.title,
+        description: project.description,
+        language: project.language,
+        tech_stack: project.tech_stack,
+        topic: project.topic,
+        institution: project.institution,
+        year: project.year,
+        repo_url: project.repo_url,
+        demo_url: project.demo_url,
+        screenshot_url: project.screenshot_url,
+      })
+      .select('id')
+      .single()
+
+    setForkBusy(false)
+
+    if (error) { setForkError(error.message); return }
+    navigate(`/projects/${data.id}`)
   }
 
   if (loading) {
@@ -211,7 +248,19 @@ export default function ProjectDetail() {
                 Live Demo
               </a>
             )}
+            <button
+              onClick={handleFork}
+              disabled={forkBusy || authLoading}
+              className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-on-surface border border-outline-variant rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-colors shadow-sm disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>fork_right</span>
+              {forkBusy ? 'Forking…' : 'Fork this project'}
+            </button>
           </div>
+
+          {forkError && (
+            <p className="mt-3 text-sm text-red-600">{forkError}</p>
+          )}
 
           {/* Description */}
           {project.description && (
